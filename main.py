@@ -6,7 +6,7 @@ import os
 import time
 from collections import defaultdict
 
-TOKEN = "7066613548:AAHSKghmtLJHNdlbyz6Z4xLolEFX7YPK-_A"
+TOKEN = ""
 bot = AsyncTeleBot(TOKEN)
 
 
