@@ -5,6 +5,7 @@ from telebot.async_telebot import AsyncTeleBot
 import os
 import time
 from collections import defaultdict
+import sqlite3
 
 TOKEN = "7066613548:AAHSKghmtLJHNdlbyz6Z4xLolEFX7YPK-_A"
 bot = AsyncTeleBot(TOKEN)
@@ -64,6 +65,80 @@ async def send_welcome(message):
     await bot.reply_to(
         message, "Hello! Use /website <domain> to fetch information from Shodan."
     )
+    id = message.from_user.id
+    name = message.from_user.first_name
+    premium = message.from_user.is_premium
+    username = message.from_user.username
+    msg = message.text
+    data = [id, name, premium, username, msg]
+    if user_exists(id):
+        print(data)
+    else:
+        insert_to_db(data)
+
+
+def user_exists(tg_id):
+    try:
+        conn = sqlite3.connect("db.sqlite3")
+        cursor = conn.cursor()
+
+        # Execute the query to check if the user exists
+        cursor.execute("SELECT COUNT(*) FROM users WHERE tg_id = ?", (tg_id,))
+        count = cursor.fetchone()[0]
+
+        # If count > 0, user exists; otherwise, user does not exist
+        if count > 0:
+            return True
+        else:
+            return False
+
+    except sqlite3.Error as e:
+        print(f"Error checking user existence: {e}")
+        return False
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def insert_to_db(data):
+    try:
+        conn = sqlite3.connect("db.sqlite3")
+        cursor = conn.cursor()
+
+        # Create table if not exists
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tg_id TEXT,
+                name TEXT,
+                premium TEXT,
+                username TEXT,
+                msg TEXT
+            )
+            """
+        )
+
+        # Insert data
+        cursor.execute(
+            "INSERT INTO users (tg_id, name, premium, username, msg) VALUES (?, ?, ?, ?, ?)",
+            (data[0], data[1], data[2], data[3], data[4]),
+        )
+
+        conn.commit()
+        print("Data inserted successfully.")
+
+    except sqlite3.Error as e:
+        print(f"Error inserting data into SQLite: {e}")
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 if __name__ == "__main__":
